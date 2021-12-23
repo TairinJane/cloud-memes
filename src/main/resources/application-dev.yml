@@ -1,0 +1,9 @@
+spring:
+  datasource:
+    username: postgres
+    password: postgres
+    url: jdbc:postgresql://localhost:5432/memes
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
