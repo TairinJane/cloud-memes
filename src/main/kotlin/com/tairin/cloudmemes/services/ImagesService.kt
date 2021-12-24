@@ -17,9 +17,7 @@ import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.multipart.MultipartFile
-import java.math.BigInteger
 import java.security.MessageDigest
-import javax.swing.text.html.parser.DTDConstants.MD
 
 
 interface ImagesService {
@@ -94,7 +92,6 @@ class ImagesServiceImpl : ImagesService {
             val imageTag = ImageTag(image, tag, user)
             imageTagsRepository.save(imageTag)
         }
-        imageTagsRepository.flush()
     }
 
     fun deleteImageTagsByUser(image: Image, user: User, tags: Iterable<Tag>) {

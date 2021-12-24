@@ -29,6 +29,9 @@ class TagsServiceImpl: TagsService {
     private lateinit var userService: UserService
 
     override fun addTag(value: String): Tag {
+        val existing = tagsRepository.findByValue(value)
+        if (existing != null) return existing
+
         val user = userService.getCurrentUser()
         val tag = Tag(value, user)
         return tagsRepository.save(tag)
