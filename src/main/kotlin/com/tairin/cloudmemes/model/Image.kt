@@ -1,6 +1,7 @@
 package com.tairin.cloudmemes.model
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.tairin.cloudmemes.dto.ImageDTO
 import org.hibernate.annotations.CreationTimestamp
 import java.time.LocalDateTime
 import javax.persistence.*
@@ -24,5 +25,14 @@ class Image(
 
     @JsonIgnore
     @OneToMany(cascade = [CascadeType.ALL], fetch = FetchType.LAZY, mappedBy = "image")
-    private val imageTags: MutableList<ImageTag> = mutableListOf()
+    val imageTags: MutableList<ImageTag> = mutableListOf()
+
+    fun toDto(user: User, url: String): ImageDTO {
+        return ImageDTO(
+            id = id ?: 0,
+            url = url,
+            created = created,
+            tags = imageTags.filter { it.user.id == user.id }.map { it.tag }
+        )
+    }
 }

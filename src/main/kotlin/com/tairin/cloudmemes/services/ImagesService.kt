@@ -4,6 +4,7 @@ import com.google.cloud.storage.BlobId
 import com.google.cloud.storage.BlobInfo
 import com.google.cloud.storage.Storage
 import com.google.cloud.storage.StorageOptions
+import com.tairin.cloudmemes.dto.ImageDTO
 import com.tairin.cloudmemes.model.Image
 import com.tairin.cloudmemes.model.ImageTag
 import com.tairin.cloudmemes.model.Tag
@@ -21,10 +22,11 @@ import java.security.MessageDigest
 
 
 interface ImagesService {
-    fun getImageUrl(id: Long): String
+    fun getImageUrl(image: Image): String
     fun addImageToUser(imageFile: MultipartFile, tagIds: List<Long>): Image
     fun getUserImages(): List<Image>
     fun findUserImagesByTags(tagIds: List<Long>, isExact: Boolean): List<Image>
+    fun getImageById(id: Long): Image
 }
 
 @Service
@@ -59,11 +61,8 @@ class ImagesServiceImpl : ImagesService {
 
     val hasher: MessageDigest = MessageDigest.getInstance("MD5")
 
-    override fun getImageUrl(id: Long): String {
-        val image =
-            imagesRepository.findByIdOrNull(id) ?: throw NoSuchElementException("Image with id = $id doesn't exist")
-        val url = image.url
-        return "https://storage.googleapis.com/$bucketName/$url"
+    override fun getImageUrl(image: Image): String {
+        return "https://storage.googleapis.com/$bucketName/${image.url}"
     }
 
     fun uploadImage(imageFile: MultipartFile): Image {
@@ -127,10 +126,9 @@ class ImagesServiceImpl : ImagesService {
         }
     }
 
-    fun getImageTags(imageId: Long): List<Tag> {
-        val image = imagesRepository.findByIdOrNull(imageId) ?: throw NoSuchElementException("No image with id = $imageId found")
+    fun getImageTags(image: Image): List<Tag> {
         val user = userService.getCurrentUser()
-        return tagsRepository.findDistinctByImageTagsImageAndImageTagsUser(image, user)
+        return image.imageTags.filter { it.user.id == user.id }.map { it.tag }
     }
 
     fun editImageTags(imageId: Long, newTagIds: List<Long>) {
@@ -145,6 +143,10 @@ class ImagesServiceImpl : ImagesService {
 
         deleteImageTagsByUser(image, user, tagsToDelete)
         addImageTagsForUser(image, user, tagsToAdd)
+    }
+
+    override fun getImageById(id: Long): Image {
+        return imagesRepository.findByIdOrNull(id) ?: throw NoSuchElementException("Image with id = $id doesn't exist")
     }
 
     private fun getImageHash(imageFile: MultipartFile): String = hasher.digest(imageFile.bytes).toString()
