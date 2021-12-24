@@ -37,6 +37,11 @@ class UsersController {
         return imagesService.getUserImages().map { it.toImageDto() }
     }
 
+    @DeleteMapping("/images/{id}")
+    fun deleteUserImage(@PathVariable id: Long): Boolean {
+        return imagesService.deleteUserImage(id)
+    }
+
     private fun Image.toImageDto(): ImageDTO {
         val user = userService.getCurrentUser()
         val url = imagesService.getImageUrl(this)

@@ -4,7 +4,6 @@ import com.google.cloud.storage.BlobId
 import com.google.cloud.storage.BlobInfo
 import com.google.cloud.storage.Storage
 import com.google.cloud.storage.StorageOptions
-import com.tairin.cloudmemes.dto.ImageDTO
 import com.tairin.cloudmemes.model.Image
 import com.tairin.cloudmemes.model.ImageTag
 import com.tairin.cloudmemes.model.Tag
@@ -18,7 +17,9 @@ import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.multipart.MultipartFile
+import java.math.BigInteger
 import java.security.MessageDigest
+import javax.swing.text.html.parser.DTDConstants.MD
 
 
 interface ImagesService {
@@ -27,6 +28,7 @@ interface ImagesService {
     fun getUserImages(): List<Image>
     fun findUserImagesByTags(tagIds: List<Long>, isExact: Boolean): List<Image>
     fun getImageById(id: Long): Image
+    fun deleteUserImage(id: Long): Boolean
 }
 
 @Service
@@ -92,6 +94,7 @@ class ImagesServiceImpl : ImagesService {
             val imageTag = ImageTag(image, tag, user)
             imageTagsRepository.save(imageTag)
         }
+        imageTagsRepository.flush()
     }
 
     fun deleteImageTagsByUser(image: Image, user: User, tags: Iterable<Tag>) {
@@ -126,6 +129,21 @@ class ImagesServiceImpl : ImagesService {
         }
     }
 
+    @Transactional
+    override fun deleteUserImage(id: Long): Boolean {
+        val user = userService.getCurrentUser()
+        val deleted = imageTagsRepository.deleteAllByUserAndImageId(user, id)
+        if (deleted == 0L) throw Exception("No image with id = $id found")
+
+        val stillUsed = imageTagsRepository.existsByImageId(id)
+        if (!stillUsed) {
+            val image = imagesRepository.findByIdOrNull(id) ?: throw Exception("No image with id = $id exists")
+            storage?.delete(bucketName, image.url)
+            imagesRepository.deleteById(id)
+        }
+        return true
+    }
+
     fun getImageTags(image: Image): List<Tag> {
         val user = userService.getCurrentUser()
         return image.imageTags.filter { it.user.id == user.id }.map { it.tag }
@@ -149,5 +167,16 @@ class ImagesServiceImpl : ImagesService {
         return imagesRepository.findByIdOrNull(id) ?: throw NoSuchElementException("Image with id = $id doesn't exist")
     }
 
-    private fun getImageHash(imageFile: MultipartFile): String = hasher.digest(imageFile.bytes).toString()
+    private fun getImageHash(imageFile: MultipartFile): String = with(hasher) {
+        update(imageFile.bytes)
+        val digest = digest()
+        val sb = StringBuffer()
+        digest.forEach { byte ->
+            var s = Integer.toHexString(0xff and byte.toInt())
+            s = if (s.length == 1) "0$s" else s
+            sb.append(s)
+        }
+        println("image hash = $sb")
+        return sb.toString()
+    }
 }

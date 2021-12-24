@@ -11,4 +11,6 @@ interface ImageTagsRepository: JpaRepository<ImageTag, Long> {
     fun findAllByTagAndUser(tag: Tag, user: User): Set<ImageTag>
     fun deleteAllByTagIdAndUser(tagId: Long, user: User): Long
     fun getAllByUserAndTagIdIn(user: User, tagIds: List<Long>): List<ImageTag>
+    fun deleteAllByUserAndImageId(user: User, imageId: Long): Long
+    fun existsByImageId(imageId: Long): Boolean
 }
